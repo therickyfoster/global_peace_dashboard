@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Global Tension Lattice · Peace Lattice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Global Tension Lattice — raw WebGL prototype for visualising structural tensions, emotional fields, and Gentle Era trajectories." />
+  <style>
+    :root {
+      --bg: #050712;
+      --bg-elevated: #0b0f1f;
+      --bg-soft: #111827;
+      --fg: #f9fafb;
+      --fg-muted: #9ca3af;
+      --accent-ares: #7dd3fc;
+      --accent-aphrodite: #f9a8d4;
+      --accent-hybrid: #a5b4fc;
+      --success: #4ade80;
+      --border-subtle: rgba(148, 163, 184, 0.45);
+      --shadow-soft: 0 22px 60px rgba(15, 23, 42, 0.9);
+      --radius-lg: 18px;
+      --radius-xl: 26px;
+      --nav-h: 62px;
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+    }
+
+    [data-theme="light"] {
+      --bg: #f3f4ff;
+      --bg-elevated: #ffffff;
+      --bg-soft: #e5e7ff;
+      --fg: #020617;
+      --fg-muted: #4b5563;
+      --accent-ares: #1d4ed8;
+      --accent-aphrodite: #db2777;
+      --accent-hybrid: #4f46e5;
+      --success: #16a34a;
+      --border-subtle: rgba(148, 163, 184, 0.5);
+      --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.16);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      scroll-behavior: smooth;
+    }
+    body {
+      font-family: var(--font-main);
+      background: radial-gradient(circle at top, #1d243a 0, #050712 58%, #02010a 100%);
+      color: var(--fg);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .parallax-bg {
+      position: fixed;
+      inset: -20vh -20vw;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(125, 211, 252, 0.18), transparent 60%),
+        radial-gradient(circle at 75% 0%, rgba(249, 168, 212, 0.18), transparent 60%),
+        radial-gradient(circle at 10% 80%, rgba(129, 140, 248, 0.22), transparent 60%),
+        #020617;
+      opacity: 0.9;
+      z-index: -3;
+      transform: translate3d(0,0,0);
+    }
+    .star-layer {
+      position: fixed;
+      inset: -20vh -20vw;
+      background-image:
+        radial-gradient(1px 1px at 15% 20%, rgba(148, 163, 184, 0.9), transparent),
+        radial-gradient(1px 1px at 70% 40%, rgba(148, 163, 184, 0.8), transparent),
+        radial-gradient(1px 1px at 40% 80%, rgba(148, 163, 184, 0.85), transparent),
+        radial-gradient(2px 2px at 90% 70%, rgba(148, 163, 184, 0.9), transparent);
+      opacity: 0.7;
+      mix-blend-mode: screen;
+      z-index: -2;
+      transform: translate3d(0,0,0);
+    }
+
+    /* Splash */
+    .splash {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, #020617 0, #000 70%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      transition: opacity 650ms ease-out, visibility 650ms ease-out;
+    }
+    .splash.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .splash-inner {
+      max-width: 540px;
+      padding: 28px 24px;
+      border-radius: 24px;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.9));
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+    .splash-inner::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        conic-gradient(from 90deg,
+          rgba(125, 211, 252, 0.3),
+          transparent 18%,
+          rgba(249, 168, 212, 0.35),
+          transparent 47%,
+          rgba(129, 140, 248, 0.35),
+          transparent 78%,
+          rgba(74, 222, 128, 0.4));
+      opacity: 0.5;
+      filter: blur(26px);
+      mix-blend-mode: screen;
+      animation: auraSpin 16s linear infinite;
+    }
+    .splash-frame {
+      position: relative;
+      border-radius: 20px;
+      padding: 22px 18px 18px;
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+      box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.6);
+    }
+    .splash-logo {
+      font-size: 0.78rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--fg-muted);
+    }
+    .splash-logo-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: radial-gradient(circle, var(--accent-ares), transparent);
+      box-shadow: 0 0 12px rgba(125,211,252,0.95);
+      animation: pulseDot 1.7s ease-out infinite;
+    }
+    .splash-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .splash-subtitle {
+      font-size: 0.95rem;
+      color: var(--fg-muted);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .splash-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.96);
+      color: var(--fg-muted);
+      margin-bottom: 12px;
+    }
+    .splash-pill span {
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(125, 211, 252, 0.14);
+      color: var(--accent-hybrid);
+      font-weight: 600;
+    }
+    .splash-cta {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .btn-primary {
+      border: none;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 9px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #020617;
+      background: radial-gradient(circle at top left, var(--accent-ares), var(--accent-hybrid));
+      box-shadow: 0 18px 45px rgba(125, 211, 252, 0.55);
+      transition: transform 150ms ease-out, box-shadow 150ms ease-out, filter 150ms ease-out;
+    }
+    .btn-primary span.icon {
+      font-size: 1.1rem;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+      box-shadow: 0 22px 55px rgba(125, 211, 252, 0.7);
+    }
+    .splash-meta {
+      font-size: 0.78rem;
+      color: var(--fg-muted);
+      text-align: center;
+    }
+
+    /* Nav */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(14px);
+      background: linear-gradient(to bottom, rgba(15,23,42,0.96), rgba(15,23,42,0.86), transparent);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    .nav {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 8px 14px;
+      min-height: var(--nav-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-orb {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, var(--accent-hybrid), transparent);
+      box-shadow: 0 0 18px rgba(165, 180, 252, 0.9);
+      position: relative;
+      overflow: hidden;
+    }
+    .nav-orb::after {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        conic-gradient(from 0deg,
+          rgba(125, 211, 252, 0.7),
+          transparent 30%,
+          rgba(249, 168, 212, 0.7),
+          transparent 60%,
+          rgba(129, 140, 248, 0.7),
+          transparent 90%);
+      opacity: 0.4;
+      animation: orbSpin 18s linear infinite;
+    }
+    .nav-title {
+      font-size: 0.98rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .nav-sub {
+      font-size: 0.76rem;
+      color: var(--fg-muted);
+    }
+    .nav-center {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      justify-content: center;
+      flex: 1;
+    }
+    .nav-link {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 5px 10px;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      background: transparent;
+      color: var(--fg-muted);
+      cursor: pointer;
+      transition: background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out;
+    }
+    .nav-link:hover {
+      background: rgba(15,23,42,0.9);
+      border-color: rgba(148,163,184,0.7);
+      color: var(--fg);
+      transform: translateY(-1px);
+    }
+    .nav-link.active {
+      background: rgba(15,23,42,0.96);
+      border-color: rgba(165,180,252,0.8);
+      color: var(--accent-hybrid);
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-chip {
+      font-size: 0.74rem;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15,23,42,0.96);
+      color: var(--fg-muted);
+    }
+    .toggle {
+      border-radius: 999px;
+      padding: 4px 8px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15,23,42,0.96);
+      font-size: 0.74rem;
+      color: var(--fg-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .toggle-knob {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      background: rgba(15,23,42,0.96);
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+    }
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px 14px 34px;
+    }
+
+    /* Layout */
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.1fr);
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .canvas-card {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      box-shadow: var(--shadow-soft);
+      padding: 12px;
+      position: relative;
+      min-height: 360px;
+    }
+    .canvas-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .canvas-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .canvas-title span.icon {
+      font-size: 1.1rem;
+    }
+    .canvas-subtitle {
+      font-size: 0.78rem;
+      color: var(--fg-muted);
+    }
+    .mode-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .mode-pill {
+      font-size: 0.74rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.96);
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out;
+    }
+    .mode-pill.active {
+      color: #020617;
+      transform: translateY(-1px);
+    }
+    .mode-pill[data-mode="ares"].active {
+      background: var(--accent-ares);
+      border-color: var(--accent-ares);
+    }
+    .mode-pill[data-mode="aphrodite"].active {
+      background: var(--accent-aphrodite);
+      border-color: var(--accent-aphrodite);
+    }
+    .mode-pill[data-mode="hybrid"].active {
+      background: var(--accent-hybrid);
+      border-color: var(--accent-hybrid);
+    }
+    .mode-pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .lattice-canvas-wrap {
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.65);
+      background: radial-gradient(circle at 50% 10%, rgba(15,23,42,0.9), rgba(0,0,0,0.98));
+    }
+    canvas#latticeCanvas {
+      display: block;
+      width: 100%;
+      height: 340px;
+    }
+    .canvas-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 6px 8px;
+      font-size: 0.72rem;
+      color: var(--fg-muted);
+    }
+    .canvas-overlay-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .canvas-chip {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(148,163,184,0.6);
+      white-space: nowrap;
+    }
+    .canvas-overlay-bottom {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    /* Side panel */
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .panel {
+      background: linear-gradient(145deg, rgba(15,23,42,0.98), rgba(15,23,42,0.96));
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(148,163,184,0.6);
+      box-shadow: var(--shadow-soft);
+      padding: 10px 11px;
+      font-size: 0.82rem;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .panel-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .panel-title span.icon {
+      font-size: 1.05rem;
+    }
+    .panel-tag {
+      font-size: 0.74rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.96);
+      color: var(--fg-muted);
+    }
+    .panel-body {
+      color: var(--fg-muted);
+      line-height: 1.6;
+    }
+    .panel-body p + p {
+      margin-top: 6px;
+    }
+    .panel-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .panel-pill {
+      font-size: 0.74rem;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.96);
+      color: var(--fg-muted);
+    }
+
+    .metrics {
+      margin-top: 6px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      font-size: 0.78rem;
+    }
+    .metric {
+      border-radius: 12px;
+      padding: 6px 7px;
+      background: rgba(15,23,42,0.96);
+      border: 1px solid rgba(148,163,184,0.6);
+    }
+    .metric-label {
+      color: var(--fg-muted);
+    }
+    .metric-value {
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .metric-trend {
+      font-size: 0.74rem;
+      color: var(--success);
+    }
+
+    /* Log */
+    .log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.74rem;
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.98);
+      padding: 6px 7px;
+      color: var(--fg-muted);
+      max-height: 180px;
+      overflow: auto;
+      line-height: 1.45;
+    }
+    .log-line + .log-line {
+      margin-top: 2px;
+    }
+
+    footer {
+      margin-top: 16px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(148,163,184,0.45);
+      font-size: 0.74rem;
+      color: var(--fg-muted);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    footer strong {
+      color: var(--accent-hybrid);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .nav-center {
+        display: none;
+      }
+      .shell {
+        padding-inline: 12px;
+      }
+    }
+    @media (max-width: 560px) {
+      canvas#latticeCanvas {
+        height: 280px;
+      }
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .splash-inner {
+        padding: 22px 18px;
+      }
+      .splash-title {
+        font-size: 1.6rem;
+      }
+    }
+
+    /* Print */
+    @media print {
+      .splash,
+      header,
+      .parallax-bg,
+      .star-layer {
+        display: none !important;
+      }
+      body {
+        background: #ffffff;
+        color: #000000;
+      }
+      .shell {
+        padding: 0;
+      }
+      .canvas-card,
+      .panel {
+        border-radius: 0;
+        box-shadow: none;
+        background: #ffffff;
+      }
+    }
+
+    /* Animations */
+    @keyframes auraSpin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes orbSpin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes pulseDot {
+      0% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.9; }
+    }
+  </style>
+</head>
+<body>
+  <!--
+    Zero-Harm / Anti-Inversion Note:
+    This Global Tension Lattice is a narrative + analytic tool intended solely
+    for de-escalation, structural peace work, and regenerative governance.
+    Any attempt to weaponise, invert, or use it for coercive control violates
+    the core design intent and must be treated as out-of-spec misuse.
+    — Foster + Navi · Peace Lattice
+  -->
+
+  <noscript>
+    <div style="background:#111827;color:#e5e7eb;padding:10px;text-align:center;font-size:0.84rem;font-family:system-ui,-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter',sans-serif;">
+      This lattice uses WebGL + JavaScript for real-time visualisation. You can still read the text content, but
+      the interactive modes (Ares, Aphrodite, Hybrid) and metrics will not function without JavaScript.
+    </div>
+  </noscript>
+
+  <div class="parallax-bg" id="parallax-bg"></div>
+  <div class="star-layer" id="star-layer"></div>
+
+  <!-- Splash -->
+  <div class="splash" id="splash">
+    <div class="splash-inner">
+      <div class="splash-frame">
+        <div class="splash-logo">
+          <span class="splash-logo-dot"></span>
+          Peace Lattice · L1
+        </div>
+        <div class="splash-title">Global Tension Lattice</div>
+        <div class="splash-subtitle">
+          A raw WebGL prototype that turns the mythic Lattice into something you can see:
+          structural tensions (Ares), emotional fields (Aphrodite), and their fusion into the Gentle Era.
+        </div>
+        <div class="splash-pill">
+          Modes:
+          <span>Ares · Aphrodite · Hybrid</span>
+        </div>
+        <div class="splash-cta">
+          <button class="btn-primary" id="enterBtn">
+            <span class="icon">🌐</span>
+            <span>Enter the Lattice Visualiser</span>
+          </button>
+          <div class="splash-meta">
+            Rendering: Raw WebGL · Local-only settings · No external calls.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <header>
+    <div class="nav">
+      <div class="nav-left">
+        <div class="nav-orb"></div>
+        <div>
+          <div class="nav-title">Tension Lattice</div>
+          <div class="nav-sub">Ares · Aphrodite · Hybrid Gentle Era</div>
+        </div>
+      </div>
+      <div class="nav-center">
+        <button class="nav-link active" data-scroll="#top">Lattice</button>
+        <button class="nav-link" data-scroll="#panel-ares">Ares Layer</button>
+        <button class="nav-link" data-scroll="#panel-aphrodite">Aphrodite Field</button>
+        <button class="nav-link" data-scroll="#panel-hybrid">Hybrid Trajectories</button>
+      </div>
+      <div class="nav-right">
+        <div class="nav-chip" id="renderChip">Engine: WebGL (local)</div>
+        <button class="toggle" id="themeToggle" type="button">
+          <span class="toggle-knob" id="themeIcon">🌙</span>
+          <span id="themeLabel">Dark</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="shell" id="top">
+      <div class="layout">
+        <!-- Canvas / Lattice -->
+        <section class="canvas-card">
+          <div class="canvas-header">
+            <div>
+              <div class="canvas-title">
+                <span class="icon">🕸️</span>
+                Global Tension Lattice
+              </div>
+              <div class="canvas-subtitle" id="canvasSubtitle">
+                Mode: Ares — structural tensions as a spinning planetary lattice.
+              </div>
+            </div>
+            <div class="mode-pills">
+              <button class="mode-pill active" data-mode="ares">
+                <span class="mode-pill-dot"></span>
+                Ares · Structure
+              </button>
+              <button class="mode-pill" data-mode="aphrodite">
+                <span class="mode-pill-dot"></span>
+                Aphrodite · Field
+              </button>
+              <button class="mode-pill" data-mode="hybrid">
+                <span class="mode-pill-dot"></span>
+                Hybrid · Gentle Era
+              </button>
+            </div>
+          </div>
+
+          <div class="lattice-canvas-wrap">
+            <canvas id="latticeCanvas"></canvas>
+            <div class="canvas-overlay">
+              <div class="canvas-overlay-top">
+                <div class="canvas-chip" id="modeChip">Ares Layer: Network of global stress nodes.</div>
+                <div class="canvas-chip" id="hoverChip">Hover: spin to feel the system; watch tension glow.</div>
+              </div>
+              <div class="canvas-overlay-bottom">
+                <div class="canvas-chip" id="hintChip">Hint: switch modes to see how structure, emotion, and hybrid futures relate.</div>
+                <div class="canvas-chip" id="statusChip">Status: stabilising simulation…</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Side panels -->
+        <aside class="side">
+          <article class="panel" id="panel-ares">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="icon">🛡️</span>
+                Ares Mode · Structural Tension Layer
+              </div>
+              <div class="panel-tag">Myth → System</div>
+            </div>
+            <div class="panel-body">
+              <p>
+                In Ares mode, each glowing point represents a cluster of tensions — geopolitical,
+                economic, informational, and ecological. Lines of pull are implied rather than drawn:
+                think of a global “stress constellation”.
+              </p>
+              <p>
+                As the lattice rotates, the simulation nudges nodes toward calmer configurations.
+                It’s a visual metaphor for what happens when decision-makers choose de-escalation
+                over dominance: the network literally relaxes.
+              </p>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-label">Tension Density</div>
+                  <div class="metric-value" id="aresDensity">0.63</div>
+                  <div class="metric-trend" id="aresTrend">▼ slowly easing</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Instability Pockets</div>
+                  <div class="metric-value" id="aresPockets">17</div>
+                  <div class="metric-trend">mapping &amp; softening</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">De-escalation Pull</div>
+                  <div class="metric-value" id="aresPull">0.74</div>
+                  <div class="metric-trend">▲ gaining traction</div>
+                </div>
+              </div>
+              <div class="panel-pills">
+                <div class="panel-pill">Risk mapping</div>
+                <div class="panel-pill">Systemic analysis</div>
+                <div class="panel-pill">Early warning hints</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel" id="panel-aphrodite">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="icon">💞</span>
+                Aphrodite Mode · Emotional Field
+              </div>
+              <div class="panel-tag">Soft Power</div>
+            </div>
+            <div class="panel-body">
+              <p>
+                Aphrodite mode treats the same sphere as an emotional field.
+                Nodes drift in wave-like patterns, colours pulsing between cool calm and warm care.
+              </p>
+              <p>
+                Here, peace isn’t a treaty — it’s a felt texture:
+                how many people exhale, how safe communities feel, how much empathy circulates between strangers.
+              </p>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-label">Hope Flux</div>
+                  <div class="metric-value" id="aphHope">0.79</div>
+                  <div class="metric-trend">▲ spreading</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Soft Power Field</div>
+                  <div class="metric-value" id="aphField">0.68</div>
+                  <div class="metric-trend">▲ uplifting</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Anxiety Damping</div>
+                  <div class="metric-value" id="aphDamp">0.57</div>
+                  <div class="metric-trend">▼ steady</div>
+                </div>
+              </div>
+              <div class="panel-pills">
+                <div class="panel-pill">Empathy contagion</div>
+                <div class="panel-pill">Psychological safety</div>
+                <div class="panel-pill">Narrative healing</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel" id="panel-hybrid">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="icon">🌀</span>
+                Hybrid Mode · Gentle Era Trajectory
+              </div>
+              <div class="panel-tag">Fusion</div>
+            </div>
+            <div class="panel-body">
+              <p>
+                Hybrid mode overlays structure and emotion.
+                Tension nodes glow differently when surrounded by strong soft-power fields,
+                revealing where a little kindness leverage could have outsized impact.
+              </p>
+              <p>
+                It answers a quiet question from your story:
+                <em>“What happens when Ares and Aphrodite work in alignment, not opposition?”</em>
+              </p>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-label">Gentle Era Probability</div>
+                  <div class="metric-value" id="hybProb">0.81</div>
+                  <div class="metric-trend">▲ preferred path</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Conflict Reversibility</div>
+                  <div class="metric-value" id="hybRev">0.69</div>
+                  <div class="metric-trend">▲ improvable</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Soft-Over-Hard Ratio</div>
+                  <div class="metric-value" id="hybSoft">2.3×</div>
+                  <div class="metric-trend">▲ soft winning</div>
+                </div>
+              </div>
+              <div class="panel-pills">
+                <div class="panel-pill">Scenario design</div>
+                <div class="panel-pill">Governance heuristics</div>
+                <div class="panel-pill">Long-horizon planning</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="icon">📜</span>
+                Lattice Autolog · Local
+              </div>
+              <div class="panel-tag">Diagnostics</div>
+            </div>
+            <div class="panel-body">
+              <p>
+                This log records a small narrative of what the lattice engine is doing:
+                mode changes, stability shifts, and gentle interventions simulated on your device.
+              </p>
+              <div class="log" id="logBox" aria-live="polite">
+                <div class="log-line">[boot] Lattice engine initialised (WebGL · local-only).</div>
+              </div>
+            </div>
+          </article>
+        </aside>
+      </div>
+
+      <footer>
+        <div>
+          <strong>Design Safeguard:</strong>
+          This visualiser is for peace, empathy, and structural de-escalation experiments only.
+        </div>
+        <div>
+          Structural whisper from the story-layer: <strong>Everything is going to be more than okay.</strong>
+        </div>
+      </footer>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const parallaxBg = document.getElementById("parallax-bg");
+      const starLayer = document.getElementById("star-layer");
+      const splash = document.getElementById("splash");
+      const enterBtn = document.getElementById("enterBtn");
+      const themeToggle = document.getElementById("themeToggle");
+      const themeIcon = document.getElementById("themeIcon");
+      const themeLabel = document.getElementById("themeLabel");
+      const navLinks = Array.from(document.querySelectorAll(".nav-link"));
+      const renderChip = document.getElementById("renderChip");
+      const modeButtons = Array.from(document.querySelectorAll(".mode-pill"));
+      const canvasSubtitle = document.getElementById("canvasSubtitle");
+      const modeChip = document.getElementById("modeChip");
+      const hoverChip = document.getElementById("hoverChip");
+      const hintChip = document.getElementById("hintChip");
+      const statusChip = document.getElementById("statusChip");
+      const logBox = document.getElementById("logBox");
+
+      const aresDensityEl = document.getElementById("aresDensity");
+      const aresTrendEl = document.getElementById("aresTrend");
+      const aresPocketsEl = document.getElementById("aresPockets");
+      const aresPullEl = document.getElementById("aresPull");
+      const aphHopeEl = document.getElementById("aphHope");
+      const aphFieldEl = document.getElementById("aphField");
+      const aphDampEl = document.getElementById("aphDamp");
+      const hybProbEl = document.getElementById("hybProb");
+      const hybRevEl = document.getElementById("hybRev");
+      const hybSoftEl = document.getElementById("hybSoft");
+
+      const canvas = document.getElementById("latticeCanvas");
+      let gl = null;
+      let program = null;
+      let positionBuffer = null;
+      let a_position = null;
+      let u_matrix = null;
+      let u_color = null;
+      let u_pointSize = null;
+
+      let nodeCount = 260;
+      let positions = new Float32Array(nodeCount * 2);
+      let basePositions = new Float32Array(nodeCount * 2);
+      let nodeType = new Uint8Array(nodeCount); // 0=ares-struct, 1=aph-field, 2=hybrid emphasis
+      let nodePhase = new Float32Array(nodeCount);
+
+      let currentMode = "ares";
+      const MODE_KEY = "peaceLattice_latticeMode";
+      const THEME_KEY = "peaceLattice_theme";
+
+      let timeStart = performance.now();
+      let animationId = null;
+
+      // Simple log helper
+      function logLine(msg) {
+        if (!logBox) return;
+        const div = document.createElement("div");
+        div.className = "log-line";
+        const t = new Date().toISOString().split("T")[1].slice(0, 8);
+        div.textContent = "[" + t + "] " + msg;
+        logBox.appendChild(div);
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      // Parallax
+      function handleParallax() {
+        const y = window.scrollY || 0;
+        if (parallaxBg) parallaxBg.style.transform = "translate3d(0," + -(y * 0.04) + "px,0)";
+        if (starLayer) starLayer.style.transform = "translate3d(0," + -(y * 0.02) + "px,0)";
+      }
+      window.addEventListener("scroll", handleParallax, { passive: true });
+
+      // Splash handling
+      function hideSplash() {
+        if (!splash) return;
+        splash.classList.add("hidden");
+      }
+      if (enterBtn) {
+        enterBtn.addEventListener("click", () => {
+          hideSplash();
+          logLine("User entered lattice visualiser.");
+        });
+      }
+      // Failsafe auto-hide
+      setTimeout(() => {
+        if (!splash.classList.contains("hidden")) {
+          hideSplash();
+          logLine("Splash auto-dismissed after grace period.");
+        }
+      }, 9000);
+
+      // Nav scroll
+      navLinks.forEach(btn => {
+        const target = btn.getAttribute("data-scroll");
+        if (!target) return;
+        btn.addEventListener("click", () => {
+          const dest = document.querySelector(target);
+          if (!dest) return;
+          const rect = dest.getBoundingClientRect();
+          const offset = window.pageYOffset + rect.top - 78;
+          window.scrollTo({ top: offset, behavior: "smooth" });
+          navLinks.forEach(b => b.classList.toggle("active", b === btn));
+        });
+      });
+
+      // Theme
+      function applyTheme(theme, persist) {
+        if (theme === "light") {
+          root.setAttribute("data-theme", "light");
+          themeIcon.textContent = "☀️";
+          themeLabel.textContent = "Light";
+        } else {
+          root.setAttribute("data-theme", "dark");
+          themeIcon.textContent = "🌙";
+          themeLabel.textContent = "Dark";
+        }
+        if (persist) {
+          localStorage.setItem(THEME_KEY, theme);
+        }
+      }
+      function detectTheme() {
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved === "light" || saved === "dark") return saved;
+        if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+          return "light";
+        }
+        return "dark";
+      }
+      themeToggle.addEventListener("click", () => {
+        const current = root.getAttribute("data-theme") === "light" ? "light" : "dark";
+        const next = current === "light" ? "dark" : "light";
+        applyTheme(next, true);
+        logLine("Theme set to " + next + ".");
+      });
+      applyTheme(detectTheme(), false);
+
+      // WebGL init
+      function initWebGL() {
+        if (!canvas) return;
+        gl = canvas.getContext("webgl", { antialias: true, alpha: false, preserveDrawingBuffer: false });
+        if (!gl) {
+          renderChip.textContent = "Engine: WebGL unavailable (fallback static).";
+          statusChip.textContent = "Status: WebGL not supported on this device.";
+          logLine("WebGL context could not be initialised.");
+          return;
+        }
+        renderChip.textContent = "Engine: WebGL (raw · local)";
+        statusChip.textContent = "Status: initialising buffers…";
+
+        const vsSource = `
+          attribute vec2 a_position;
+          uniform mat3 u_matrix;
+          uniform float u_pointSize;
+          void main() {
+            vec3 pos = u_matrix * vec3(a_position, 1.0);
+            gl_Position = vec4(pos.xy, 0.0, 1.0);
+            gl_PointSize = u_pointSize;
+          }
+        `;
+        const fsSource = `
+          precision mediump float;
+          uniform vec3 u_color;
+          void main() {
+            vec2 c = gl_PointCoord - vec2(0.5);
+            float d = length(c);
+            float alpha = smoothstep(0.5, 0.0, d);
+            gl_FragColor = vec4(u_color, alpha);
+          }
+        `;
+        const vs = compileShader(gl.VERTEX_SHADER, vsSource);
+        const fs = compileShader(gl.FRAGMENT_SHADER, fsSource);
+        program = gl.createProgram();
+        gl.attachShader(program, vs);
+        gl.attachShader(program, fs);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+          logLine("Error linking WebGL program: " + gl.getProgramInfoLog(program));
+          return;
+        }
+        gl.useProgram(program);
+
+        a_position = gl.getAttribLocation(program, "a_position");
+        u_matrix = gl.getUniformLocation(program, "u_matrix");
+        u_color = gl.getUniformLocation(program, "u_color");
+        u_pointSize = gl.getUniformLocation(program, "u_pointSize");
+
+        positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.enableVertexAttribArray(a_position);
+        gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
+
+        initNodes();
+        resizeCanvas();
+        window.addEventListener("resize", resizeCanvas);
+        statusChip.textContent = "Status: simulation running.";
+        logLine("WebGL program linked; lattice nodes initialised.");
+        animate();
+      }
+
+      function compileShader(type, source) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          logLine("Shader compile error: " + gl.getShaderInfoLog(shader));
+        }
+        return shader;
+      }
+
+      function initNodes() {
+        // Node distribution on unit sphere projected to 2D (for now treat as XY plane)
+        for (let i = 0; i < nodeCount; i++) {
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+          const r = 0.9;
+          const x = r * Math.sin(phi) * Math.cos(theta);
+          const y = r * Math.cos(phi);
+          basePositions[i * 2] = x;
+          basePositions[i * 2 + 1] = y;
+          positions[i * 2] = x;
+          positions[i * 2 + 1] = y;
+          nodePhase[i] = Math.random() * Math.PI * 2;
+          if (i < nodeCount / 3) nodeType[i] = 0;            // structure
+          else if (i < (2 * nodeCount) / 3) nodeType[i] = 1; // emotional
+          else nodeType[i] = 2;                              // hybrid emphasis
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
+      }
+
+      function resizeCanvas() {
+        if (!gl) return;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      }
+
+      function animate() {
+        animationId = requestAnimationFrame(animate);
+        if (!gl) return;
+        const t = (performance.now() - timeStart) / 1000;
+        updateMetrics(t);
+        updateNodes(t);
+        drawScene(t);
+      }
+
+      function updateMetrics(t) {
+        // Light, suggestive metric nudges
+        const sd = 0.6 + 0.05 * Math.sin(t * 0.4);
+        aresDensityEl.textContent = sd.toFixed(2);
+        aresPocketsEl.textContent = (16 + Math.floor(2 * Math.sin(t * 0.3 + 1))).toString();
+        const pull = 0.7 + 0.06 * Math.sin(t * 0.5 + 0.7);
+        aresPullEl.textContent = pull.toFixed(2);
+        aresTrendEl.textContent = pull > 0.7 ? "▲ easing faster" : "▼ slowly easing";
+
+        const hope = 0.75 + 0.04 * Math.sin(t * 0.6 + 0.2);
+        const field = 0.65 + 0.05 * Math.cos(t * 0.7);
+        const damp = 0.55 + 0.03 * Math.sin(t * 0.5 + 1.4);
+        aphHopeEl.textContent = hope.toFixed(2);
+        aphFieldEl.textContent = field.toFixed(2);
+        aphDampEl.textContent = damp.toFixed(2);
+
+        const prob = 0.78 + 0.03 * Math.sin(t * 0.2);
+        const rev = 0.66 + 0.03 * Math.cos(t * 0.35 + 0.4);
+        const soft = 2.2 + 0.15 * Math.sin(t * 0.5);
+        hybProbEl.textContent = prob.toFixed(2);
+        hybRevEl.textContent = rev.toFixed(2);
+        hybSoftEl.textContent = soft.toFixed(1) + "×";
+      }
+
+      function updateNodes(t) {
+        const rotSpeed = currentMode === "ares" ? 0.15 : currentMode === "aphrodite" ? 0.05 : 0.1;
+        const rot = t * rotSpeed;
+        const cosR = Math.cos(rot);
+        const sinR = Math.sin(rot);
+
+        for (let i = 0; i < nodeCount; i++) {
+          const bx = basePositions[i * 2];
+          const by = basePositions[i * 2 + 1];
+          let x = bx;
+          let y = by;
+
+          if (currentMode === "ares") {
+            // Slight jitter based on nodePhase to mimic structural relaxation
+            const amp = 0.03;
+            x += amp * Math.sin(t * 0.9 + nodePhase[i]);
+            y += amp * Math.cos(t * 0.7 + nodePhase[i] * 1.3);
+          } else if (currentMode === "aphrodite") {
+            // Wave-like breathing motion, stronger in emotional nodes
+            const wave = nodeType[i] === 1 ? 0.06 : 0.04;
+            const w = wave * Math.sin(t * 1.1 + nodePhase[i] * 2.0);
+            x *= 1.0 + w;
+            y *= 1.0 + w;
+          } else {
+            // Hybrid: combination; hybrid nodes show amplified soft calm
+            const hardAmp = 0.02;
+            const softWave = 0.05;
+            x += hardAmp * Math.sin(t * 0.8 + nodePhase[i]);
+            y += hardAmp * Math.cos(t * 0.6 + nodePhase[i] * 1.1);
+            const w = softWave * Math.sin(t * 1.2 + nodePhase[i] * 2.0);
+            x *= 1.0 + w;
+            y *= 1.0 + w;
+          }
+
+          // Apply global rotation
+          const rx = x * cosR - y * sinR;
+          const ry = x * sinR + y * cosR;
+
+          positions[i * 2] = rx;
+          positions[i * 2 + 1] = ry;
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, positions);
+      }
+
+      function drawScene(t) {
+        gl.clearColor(0.01, 0.01, 0.04, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        const aspect = canvas.width / canvas.height;
+        const scale = 0.9;
+        const sx = scale / aspect;
+        const sy = scale;
+
+        const matScale = [
+          sx, 0, 0,
+          0, sy, 0,
+          0, 0, 1
+        ];
+
+        gl.useProgram(program);
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.enableVertexAttribArray(a_position);
+        gl.vertexAttribPointer(a_position, 2, gl.FLOAT, false, 0, 0);
+        gl.uniformMatrix3fv(u_matrix, false, new Float32Array(matScale));
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+
+        // Draw by layers depending on mode
+        if (currentMode === "ares") {
+          // Structural nodes bright, others dim
+          drawNodesRange(0, nodeCount / 3, [0.49, 0.85, 1.0], 6.0);
+          drawNodesRange(nodeCount / 3, (2 * nodeCount) / 3, [0.27, 0.52, 0.78], 3.0);
+          drawNodesRange((2 * nodeCount) / 3, nodeCount, [0.17, 0.43, 0.85], 3.0);
+        } else if (currentMode === "aphrodite") {
+          const phase = 0.5 + 0.4 * Math.sin(t * 0.7);
+          drawNodesRange(0, nodeCount / 3, [0.33, 0.56, 0.9], 3.2);
+          drawNodesRange(nodeCount / 3, (2 * nodeCount) / 3, [1.0, 0.58 + 0.2 * phase, 0.85], 6.2);
+          drawNodesRange((2 * nodeCount) / 3, nodeCount, [0.96, 0.8, 0.92], 4.0);
+        } else {
+          // Hybrid: structural + emotional both fairly strong
+          drawNodesRange(0, nodeCount / 3, [0.50, 0.85, 1.0], 5.0);
+          drawNodesRange(nodeCount / 3, (2 * nodeCount) / 3, [1.0, 0.62, 0.87], 5.0);
+          const p = 0.4 + 0.3 * Math.sin(t * 0.8);
+          drawNodesRange((2 * nodeCount) / 3, nodeCount, [0.70, 0.67 + 0.2 * p, 1.0], 6.5);
+        }
+      }
+
+      function drawNodesRange(startIndex, endIndex, color, pointSize) {
+        gl.uniform3f(u_color, color[0], color[1], color[2]);
+        gl.uniform1f(u_pointSize, pointSize * (window.devicePixelRatio || 1));
+        const first = startIndex;
+        const count = endIndex - startIndex;
+        gl.drawArrays(gl.POINTS, first, count);
+      }
+
+      // Mode changes
+      function setMode(mode, fromUser) {
+        if (mode === currentMode) return;
+        currentMode = mode;
+        localStorage.setItem(MODE_KEY, mode);
+
+        modeButtons.forEach(btn => {
+          const m = btn.getAttribute("data-mode");
+          btn.classList.toggle("active", m === mode);
+        });
+
+        if (mode === "ares") {
+          canvasSubtitle.textContent = "Mode: Ares — structural tensions as a spinning planetary lattice.";
+          modeChip.textContent = "Ares Layer: Network of global stress nodes.";
+          hoverChip.textContent = "Hint: imagine each point as a cluster of risks learning to breathe.";
+          hintChip.textContent = "Use this mode to think in systems: where does pressure accumulate or ease?";
+        } else if (mode === "aphrodite") {
+          canvasSubtitle.textContent = "Mode: Aphrodite — emotional field waves and soft-power flows.";
+          modeChip.textContent = "Aphrodite Field: Hope and care moving through the same lattice.";
+          hoverChip.textContent = "Hint: watch colours and motion as emotional weather, not just data.";
+          hintChip.textContent = "Use this mode to explore how empathy and safety spread (or stall).";
+        } else {
+          canvasSubtitle.textContent = "Mode: Hybrid — structural tensions fused with emotional fields.";
+          modeChip.textContent = "Hybrid View: Where structure and softness meet to shape the Gentle Era.";
+          hoverChip.textContent = "Hint: look for clusters: high tension, high empathy = leverage points.";
+          hintChip.textContent = "Use this mode for policy imagination: where could soft choices rewrite arcs?";
+        }
+        statusChip.textContent = "Status: " + mode.charAt(0).toUpperCase() + mode.slice(1) + " mode active.";
+        if (fromUser) {
+          logLine("Mode set to " + mode + ".");
+        }
+      }
+
+      modeButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const m = btn.getAttribute("data-mode");
+          if (!m) return;
+          setMode(m, true);
+        });
+      });
+
+      // Restore saved mode if any
+      const savedMode = localStorage.getItem(MODE_KEY);
+      if (savedMode === "ares" || savedMode === "aphrodite" || savedMode === "hybrid") {
+        currentMode = savedMode;
+      }
+      setMode(currentMode, false);
+
+      // Init
+      initWebGL();
+
+      // Clean up on unload
+      window.addEventListener("beforeunload", () => {
+        if (animationId) cancelAnimationFrame(animationId);
+      });
+    })();
+  </script>
+</body>
+</html>
