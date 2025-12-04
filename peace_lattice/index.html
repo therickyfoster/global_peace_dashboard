@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Global Peace Dashboard · Peace Lattice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Global Peace Dashboard — a prototype Peace Lattice interface for tracking fear curves, cooperation, and micro-acts of kindness across the world." />
+  <style>
+    /* =========================================================
+       GLOBAL PEACE DASHBOARD
+       Zero external dependencies. Online-first, offline-capable.
+       ========================================================= */
+
+    :root {
+      --bg: #050712;
+      --bg-elevated: #0b0f1f;
+      --bg-soft: #111727;
+      --fg: #f5f7ff;
+      --fg-muted: #a5b0d6;
+      --accent: #7dd3fc;
+      --accent-soft: rgba(125, 211, 252, 0.18);
+      --accent-2: #a5b4fc;
+      --accent-3: #6ee7b7;
+      --danger: #fb7185;
+      --success: #4ade80;
+      --border-subtle: rgba(148, 163, 184, 0.35);
+      --shadow-soft: 0 18px 60px rgba(15, 23, 42, 0.9);
+      --radius-lg: 18px;
+      --radius-xl: 26px;
+      --nav-h: 64px;
+      --transition-fast: 170ms ease-out;
+      --transition-med: 260ms ease-out;
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      --glow-strong: 0 0 24px rgba(125, 211, 252, 0.9);
+    }
+
+    [data-theme="light"] {
+      --bg: #f4f4ff;
+      --bg-elevated: #ffffff;
+      --bg-soft: #e5e7ff;
+      --fg: #020617;
+      --fg-muted: #4b5563;
+      --accent: #2563eb;
+      --accent-soft: rgba(37, 99, 235, 0.08);
+      --accent-2: #6366f1;
+      --accent-3: #059669;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --border-subtle: rgba(148, 163, 184, 0.45);
+      --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.12);
+      --glow-strong: 0 0 20px rgba(37, 99, 235, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background: radial-gradient(circle at top, #1d243a 0, #050712 55%, #02010a 100%);
+      color: var(--fg);
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Parallax starfield background */
+    .parallax-bg {
+      position: fixed;
+      inset: -20vh -20vw;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(125, 211, 252, 0.15), transparent 55%),
+        radial-gradient(circle at 80% 10%, rgba(165, 180, 252, 0.14), transparent 60%),
+        radial-gradient(circle at 10% 80%, rgba(52, 211, 153, 0.18), transparent 58%),
+        #020617;
+      opacity: 0.9;
+      z-index: -3;
+      transform: translate3d(0, 0, 0);
+      will-change: transform;
+    }
+
+    .star-layer {
+      position: fixed;
+      inset: -20vh -20vw;
+      background-image:
+        radial-gradient(2px 2px at 10% 20%, rgba(148, 163, 184, 0.9), transparent),
+        radial-gradient(1px 1px at 80% 40%, rgba(148, 163, 184, 0.9), transparent),
+        radial-gradient(1.5px 1.5px at 30% 70%, rgba(148, 163, 184, 0.9), transparent),
+        radial-gradient(1.3px 1.3px at 60% 90%, rgba(148, 163, 184, 0.7), transparent);
+      opacity: 0.6;
+      z-index: -2;
+      mix-blend-mode: screen;
+      transform: translate3d(0, 0, 0);
+      will-change: transform;
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Splash screen */
+    .splash {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, #0f172a 0, #020617 55%, #000 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      transition: opacity 700ms ease-out, visibility 700ms ease-out;
+    }
+
+    .splash.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-inner {
+      max-width: 560px;
+      padding: 32px 26px;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9));
+      border-radius: 24px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      box-shadow: var(--shadow-soft);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .splash-inner::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        conic-gradient(from 120deg, rgba(125, 211, 252, 0.2), transparent 20%, rgba(96, 165, 250, 0.35), transparent 60%, rgba(34, 197, 94, 0.4), transparent 80%, rgba(244, 114, 182, 0.35));
+      opacity: 0.4;
+      filter: blur(26px);
+      mix-blend-mode: screen;
+      animation: splashAura 14s linear infinite;
+    }
+
+    .splash-frame {
+      position: relative;
+      border-radius: 20px;
+      padding: 24px 18px 20px;
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+      box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.55);
+    }
+
+    .splash-logo {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--accent-2);
+      margin-bottom: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .splash-logo-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: radial-gradient(circle, var(--accent), transparent);
+      box-shadow: 0 0 12px rgba(125, 211, 252, 0.9);
+      animation: pulseDot 1.6s ease-out infinite;
+    }
+
+    .splash-title {
+      font-size: 1.85rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .splash-subtitle {
+      color: var(--fg-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+
+    .splash-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 999px;
+      padding: 6px 12px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      color: var(--fg-muted);
+      margin-bottom: 16px;
+    }
+
+    .splash-pill span {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .splash-cta {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .btn-primary {
+      border: none;
+      cursor: pointer;
+      padding: 10px 20px;
+      border-radius: 999px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      background: radial-gradient(circle at top left, var(--accent), var(--accent-2));
+      color: #0b1120;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 16px 40px rgba(125, 211, 252, 0.45);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px) scale(1.01);
+      filter: brightness(1.05);
+      box-shadow: 0 20px 50px rgba(125, 211, 252, 0.6);
+    }
+
+    .btn-primary span.icon {
+      font-size: 1.1rem;
+    }
+
+    .splash-meta {
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+    }
+
+    /* Top nav */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(14px);
+      background: linear-gradient(to bottom, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.85), transparent);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .nav {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: var(--nav-h);
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-orb {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, var(--accent), transparent);
+      box-shadow: var(--glow-strong);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nav-orb::after {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        conic-gradient(from 120deg, rgba(125, 211, 252, 0.5), transparent 40%, rgba(165, 180, 252, 0.7), transparent 75%, rgba(45, 212, 191, 0.85));
+      opacity: 0.22;
+      animation: orbSpin 18s linear infinite;
+    }
+
+    .nav-title {
+      font-size: 0.96rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .nav-sub {
+      font-size: 0.76rem;
+      color: var(--fg-muted);
+    }
+
+    .nav-center {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .nav-link {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      color: var(--fg-muted);
+      cursor: pointer;
+      background: transparent;
+      transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+      white-space: nowrap;
+    }
+
+    .nav-link:hover {
+      background: rgba(15, 23, 42, 0.7);
+      border-color: rgba(148, 163, 184, 0.7);
+      color: var(--fg);
+      transform: translateY(-1px);
+    }
+
+    .nav-link.active {
+      color: var(--accent);
+      border-color: rgba(125, 211, 252, 0.7);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-chip {
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      color: var(--fg-muted);
+      cursor: default;
+    }
+
+    .toggle {
+      border-radius: 999px;
+      padding: 4px 8px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.9);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      color: var(--fg-muted);
+    }
+
+    .toggle-knob {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: var(--accent);
+    }
+
+    /* Layout */
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px 16px 40px;
+    }
+
+    .hero {
+      margin-top: 10px;
+      margin-bottom: 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .hero-main {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.92));
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow: var(--shadow-soft);
+      padding: 20px 18px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-main::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(125, 211, 252, 0.26), transparent 60%),
+        radial-gradient(circle at 85% 20%, rgba(129, 140, 248, 0.26), transparent 60%),
+        radial-gradient(circle at 30% 100%, rgba(52, 211, 153, 0.3), transparent 60%);
+      opacity: 0.55;
+      filter: blur(22px);
+      mix-blend-mode: screen;
+    }
+
+    .hero-main-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-kicker {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .hero-title {
+      font-size: clamp(1.4rem, 1.8rem, 2.1rem);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .hero-subtitle {
+      font-size: 0.95rem;
+      color: var(--fg-muted);
+      max-width: 36rem;
+      margin-bottom: 12px;
+    }
+
+    .hero-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .hero-pill {
+      font-size: 0.76rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      color: var(--fg-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-pill span {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      font-size: 0.75rem;
+      color: var(--fg-muted);
+    }
+
+    .hero-badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--success);
+      box-shadow: 0 0 12px rgba(74, 222, 128, 0.9);
+    }
+
+    .hero-metrics {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .metric {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 16px;
+      padding: 10px 10px 9px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 0.78rem;
+    }
+
+    .metric-label {
+      color: var(--fg-muted);
+    }
+
+    .metric-value {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .metric-trend {
+      font-size: 0.75rem;
+    }
+
+    .metric-trend.positive {
+      color: var(--success);
+    }
+
+    .metric-trend.negative {
+      color: var(--danger);
+    }
+
+    .hero-side {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .panel {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+      border-radius: var(--radius-lg);
+      padding: 14px 13px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .panel-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .panel-title span.icon {
+      font-size: 1.1rem;
+    }
+
+    .panel-body {
+      font-size: 0.82rem;
+      color: var(--fg-muted);
+      line-height: 1.6;
+    }
+
+    .panel-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      margin-top: 8px;
+      color: var(--fg-muted);
+    }
+
+    .pill-soft {
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+    }
+
+    .search-bar {
+      margin: 18px 0 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .search-input-wrap {
+      flex: 1;
+      min-width: 210px;
+      position: relative;
+    }
+
+    .search-input-wrap input {
+      width: 100%;
+      padding: 8px 30px 8px 26px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--fg);
+      font-size: 0.8rem;
+      outline: none;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+    }
+
+    .search-input-wrap input:focus {
+      border-color: rgba(125, 211, 252, 0.9);
+      box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.4);
+      background: rgba(15, 23, 42, 0.98);
+    }
+
+    .search-input-wrap .icon {
+      position: absolute;
+      left: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.9rem;
+      color: var(--fg-muted);
+    }
+
+    .search-input-wrap .clear {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: var(--fg-muted);
+      display: none;
+    }
+
+    .search-input-wrap .clear.visible {
+      display: block;
+    }
+
+    .search-meta {
+      font-size: 0.76rem;
+      color: var(--fg-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .search-meta span {
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    /* Sections */
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.4fr);
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    section {
+      margin-bottom: 14px;
+    }
+
+    .section-card {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      padding: 14px 12px 12px;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .section-title span.icon {
+      font-size: 1.1rem;
+    }
+
+    .section-tagline {
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+    }
+
+    .section-body {
+      font-size: 0.82rem;
+      color: var(--fg-muted);
+      line-height: 1.6;
+    }
+
+    .section-body p + p {
+      margin-top: 6px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .chip {
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      font-size: 0.76rem;
+      color: var(--fg-muted);
+    }
+
+    /* Tiny “sparkline” meters */
+    .spark-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .spark {
+      flex: 1;
+      min-width: 120px;
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      padding: 5px 8px;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .spark-label {
+      color: var(--fg-muted);
+    }
+
+    .spark-meter {
+      flex: 1;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(30, 64, 175, 0.7);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .spark-fill {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: linear-gradient(to right, var(--accent), var(--accent-3));
+      transform-origin: left center;
+      transform: scaleX(0.7);
+      transition: transform 600ms ease-out;
+    }
+
+    .spark-value {
+      font-size: 0.75rem;
+      color: var(--accent-3);
+      margin-left: 6px;
+    }
+
+    /* Autopilot log */
+    .log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.74rem;
+      background: rgba(15, 23, 42, 0.98);
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 8px 8px 6px;
+      color: var(--fg-muted);
+      max-height: 210px;
+      overflow: auto;
+      line-height: 1.45;
+    }
+
+    .log-line {
+      white-space: pre-wrap;
+    }
+
+    .log-line + .log-line {
+      margin-top: 2px;
+    }
+
+    /* Search highlight */
+    .search-match {
+      outline: 1px solid rgba(125, 211, 252, 0.7);
+      box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.35);
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 20px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(148, 163, 184, 0.45);
+      font-size: 0.75rem;
+      color: var(--fg-muted);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    footer strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Collapsible sections (basic) */
+    .collapsible-toggle {
+      font-size: 0.75rem;
+      border-radius: 999px;
+      padding: 3px 8px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .collapsible-toggle span.icon {
+      font-size: 0.85rem;
+    }
+
+    .collapsible-content {
+      margin-top: 8px;
+    }
+
+    .collapsible-content[data-collapsed="true"] {
+      display: none;
+    }
+
+    /* Print stylesheet */
+    @media print {
+      .splash,
+      header,
+      .search-bar,
+      .nav,
+      .parallax-bg,
+      .star-layer {
+        display: none !important;
+      }
+      body {
+        background: #ffffff;
+        color: #000000;
+      }
+      .shell {
+        max-width: none;
+        padding: 0;
+      }
+      .section-card,
+      .panel,
+      .hero-main,
+      .hero-side {
+        box-shadow: none;
+        border-radius: 0;
+        border: none;
+        background: #ffffff;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 880px) {
+      .hero {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .nav-center {
+        display: none;
+      }
+      .shell {
+        padding-inline: 12px;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .hero-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .panel {
+        padding: 12px 11px;
+      }
+      .hero-main {
+        padding: 16px 14px;
+      }
+      .splash-inner {
+        padding: 24px 18px;
+      }
+      .splash-title {
+        font-size: 1.55rem;
+      }
+    }
+
+    /* Animations */
+    @keyframes splashAura {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes orbSpin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes pulseDot {
+      0% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.9; }
+    }
+  </style>
+</head>
+<body>
+  <!--
+    Zero-Harm / Anti-Inversion Note (HTML comment):
+    This Global Peace Dashboard is designed as a regenerative tool.
+    It must never be used to justify violence, suppression, or harm.
+    Any attempt to invert its purpose violates the core design intent.
+    — Foster + Navi · Peace Lattice
+  -->
+
+  <noscript>
+    <div style="background:#111827;color:#e5e7eb;padding:12px;text-align:center;font-family:system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif;font-size:0.85rem;">
+      This dashboard uses a small amount of JavaScript for navigation, metrics, and local preferences.
+      You can still read the content, but interactive features and state saving are disabled without JavaScript.
+    </div>
+  </noscript>
+
+  <div class="parallax-bg" id="parallax-bg"></div>
+  <div class="star-layer" id="star-layer"></div>
+
+  <!-- Splash Screen -->
+  <div class="splash" id="splash">
+    <div class="splash-inner">
+      <div class="splash-frame">
+        <div class="splash-logo">
+          <span class="splash-logo-dot"></span>
+          Peace Lattice · v0.1
+        </div>
+        <div class="splash-title">Global Peace Dashboard</div>
+        <div class="splash-subtitle">
+          A prototype interface for the Gentle Era — tracking fear curves, cooperation fields,
+          and the tiny acts of kindness that bend history toward safety.
+        </div>
+        <div class="splash-pill">
+          Structural Intent:
+          <span>Everything is going to be more than okay.</span>
+        </div>
+        <div class="splash-cta">
+          <button class="btn-primary" id="enterDashboard">
+            <span class="icon">🕊️</span>
+            <span>Enter the Global Peace Dashboard</span>
+          </button>
+          <div class="splash-meta">
+            Autopilot &amp; local preferences will be stored only in your browser.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="nav">
+      <div class="nav-left">
+        <div class="nav-orb"></div>
+        <div>
+          <div class="nav-title">Global Peace Dashboard</div>
+          <div class="nav-sub">Peace Lattice · Gentle Era Prototype</div>
+        </div>
+      </div>
+      <div class="nav-center">
+        <button class="nav-link active" data-scroll-target="section-overview">Overview</button>
+        <button class="nav-link" data-scroll-target="section-fear">Fear Curve</button>
+        <button class="nav-link" data-scroll-target="section-softpower">Soft Power</button>
+        <button class="nav-link" data-scroll-target="section-micro">Micro-Actions</button>
+        <button class="nav-link" data-scroll-target="section-autopilot">Autopilot Log</button>
+      </div>
+      <div class="nav-right">
+        <div class="nav-chip">Prototype · Local Only</div>
+        <button class="toggle" id="themeToggle" type="button">
+          <span class="toggle-knob" id="themeIcon">🌙</span>
+          <span id="themeLabel">Dark</span>
+        </button>
+        <button class="toggle" id="autopilotToggle" type="button">
+          <span class="toggle-knob">🤖</span>
+          <span id="autopilotLabel">Autopilot: Off</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="shell">
+      <section class="hero" id="section-overview" data-search="overview gentle era peace lattice global exhale">
+        <div class="hero-main section-card">
+          <div class="hero-main-inner">
+            <div class="hero-kicker">Gentle Era · Global Overview</div>
+            <h1 class="hero-title">The night fear lost its throne. The morning hope stayed.</h1>
+            <p class="hero-subtitle">
+              This prototype dashboard imagines a world where the global nervous system stabilizes —
+              fear curves bend downward, cooperation rises, and ordinary people become peacekeepers
+              through the smallest daily gestures.
+            </p>
+            <div class="hero-row">
+              <div class="hero-pill">
+                Structural State:
+                <span id="gentleEraStatus">Stabilizing</span>
+              </div>
+              <div class="hero-badge">
+                <span class="hero-badge-dot"></span>
+                World Nervous System: <strong style="margin-left:4px;">De-escalating</strong>
+              </div>
+            </div>
+
+            <div class="hero-metrics">
+              <div class="metric">
+                <div class="metric-label">Global Fear Index</div>
+                <div class="metric-value" id="fearIndex">0.38</div>
+                <div class="metric-trend positive" id="fearTrend">▼ calming</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Cooperation Field</div>
+                <div class="metric-value" id="cooperationIndex">0.71</div>
+                <div class="metric-trend positive" id="cooperationTrend">▲ rising</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Kindness Throughput</div>
+                <div class="metric-value" id="kindnessIndex">1.23M</div>
+                <div class="metric-trend positive" id="kindnessTrend">+ tiny miracles</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="hero-side">
+          <div class="panel">
+            <div class="panel-title">
+              <span><span class="icon">🧠</span> Structural Intent</span>
+              <span class="pill-soft">“More than okay.”</span>
+            </div>
+            <div class="panel-body">
+              This dashboard is a narrative-bridge: it treats the planet as one shared nervous system.
+              Instead of tracking only threats, it tracks:
+              <ul style="margin-top:6px;padding-left:16px;">
+                <li>when fear quiets,</li>
+                <li>when empathy rises,</li>
+                <li>and when ordinary people choose kindness.</li>
+              </ul>
+            </div>
+            <div class="panel-row">
+              <span>Design Mode: <strong>Peace-First Analytics</strong></span>
+              <span>Scope: <strong>World-Level</strong></span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">
+              <span><span class="icon">📦</span> Local Only · Autopilot</span>
+            </div>
+            <div class="panel-body">
+              Preferences, autopilot mode, and gentle-notes are stored only in your browser via IndexedDB.
+              No external servers, no telemetry — just you and the peace metrics.
+            </div>
+            <div class="panel-row">
+              <span>Storage: <strong>IndexedDB</strong></span>
+              <span id="dbStatus">DB: initialising…</span>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <div class="search-bar">
+        <div class="search-input-wrap">
+          <span class="icon">🔍</span>
+          <input id="searchInput" type="search" placeholder="Search the peace lattice (e.g. ‘soft power’, ‘fear curve’, ‘kindness’)…" />
+          <span class="clear" id="searchClear">✕</span>
+        </div>
+        <div class="search-meta">
+          <span id="searchCount">0 matches</span>
+          <span>Search is client-side · nothing leaves your device.</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- Fear Curve Section -->
+        <section id="section-fear" class="section-card" data-search="fear curve escalation probabilities de-escalation stabilisation night risk indicators early warning system">
+          <div class="section-header">
+            <div>
+              <div class="section-title">
+                <span class="icon">📉</span>
+                Global Fear Curve
+              </div>
+              <div class="section-tagline">
+                From “hair-trigger” to “structurally calm”.
+              </div>
+            </div>
+            <button class="collapsible-toggle" data-target="fearDetails">
+              <span class="icon">▾</span>
+              Details
+            </button>
+          </div>
+          <div class="section-body">
+            <p>
+              In the story, analysts watch escalation probabilities collapse so fast they assume the system glitched.
+              This dashboard turns that moment into an analytic object:
+              a real-time view of how fear rises, plateaus, or bends down when peace work lands.
+            </p>
+            <p>
+              The “Fear Curve” is not just about war — it includes information overload, economic panic,
+              and collective anxiety. When the curve bends,
+              political instincts shift from survival-mode to wisdom-mode.
+            </p>
+
+            <div class="spark-row">
+              <div class="spark">
+                <span class="spark-label">Geopolitical Tension</span>
+                <div class="spark-meter">
+                  <div class="spark-fill" id="sparkGeo"></div>
+                </div>
+                <span class="spark-value" id="sparkGeoVal">0.41</span>
+              </div>
+              <div class="spark">
+                <span class="spark-label">Information Panic</span>
+                <div class="spark-meter">
+                  <div class="spark-fill" id="sparkInfo"></div>
+                </div>
+                <span class="spark-value" id="sparkInfoVal">0.52</span>
+              </div>
+              <div class="spark">
+                <span class="spark-label">Collective Anxiety</span>
+                <div class="spark-meter">
+                  <div class="spark-fill" id="sparkAnxiety"></div>
+                </div>
+                <span class="spark-value" id="sparkAnxietyVal">0.45</span>
+              </div>
+            </div>
+
+            <div class="collapsible-content" id="fearDetails" data-collapsed="true">
+              <p style="margin-top:8px;">
+                In research terms, this module points to:
+              </p>
+              <ul style="margin-top:4px;padding-left:16px;">
+                <li>early-warning systems for conflict and social unrest,</li>
+                <li>sentiment analysis across media and public discourse,</li>
+                <li>and interventions that lower baseline arousal in populations.</li>
+              </ul>
+              <p style="margin-top:6px;">
+                The goal is simple: make the “normal state” of the world feel survivable,
+                so escalatory decisions become the rare exception instead of the default.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Soft Power Section -->
+        <section id="section-softpower" class="section-card" data-search="soft power aphrodite emotional field empathy hope narratives diplomats gentleness">
+          <div class="section-header">
+            <div>
+              <div class="section-title">
+                <span class="icon">💗</span>
+                Soft Power Field
+              </div>
+              <div class="section-tagline">
+                When one person’s empathy stabilises whole regions.
+              </div>
+            </div>
+            <button class="collapsible-toggle" data-target="softDetails">
+              <span class="icon">▾</span>
+              Methods
+            </button>
+          </div>
+          <div class="section-body">
+            <p>
+              Aphrodite doesn’t sign treaties. She sits on the floor with a blanket and a candle and decides:
+              <em>“If he’s working for peace, then I’ll become peace.”</em>
+              Her emotional field quietly dampens aggression thresholds around the world.
+            </p>
+            <p>
+              This field represents soft power, feminist peace theory, and narrative-level psychological safety.
+              It asks: how much conflict is prevented when people who will never meet a president simply radiate
+              “may everyone be safe” into their daily choices?
+            </p>
+
+            <div class="chips">
+              <div class="chip">Empathy contagion</div>
+              <div class="chip">Narrative reframing</div>
+              <div class="chip">Feminist peace theory</div>
+              <div class="chip">Soft power diplomacy</div>
+              <div class="chip">Psychological safety</div>
+            </div>
+
+            <div class="collapsible-content" id="softDetails" data-collapsed="true">
+              <p style="margin-top:8px;">
+                In real-world practice, this points toward:
+              </p>
+              <ul style="margin-top:4px;padding-left:16px;">
+                <li>mass campaigns that normalise care, not contempt,</li>
+                <li>media that lowers panic instead of monetising outrage,</li>
+                <li>and leaders trained to speak from grounded nervous systems.</li>
+              </ul>
+              <p style="margin-top:6px;">
+                The hypothesis: if enough “Aphrodites” hold a soft field, whole nations walk back from the edge
+                before the data even updates.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="grid">
+        <!-- Micro-Actions Section -->
+        <section id="section-micro" class="section-card" data-search="micro actions peace begins in kitchens tiny miracles prosocial behaviour neighbourhoods everyday kindness">
+          <div class="section-header">
+            <div>
+              <div class="section-title">
+                <span class="icon">🪴</span>
+                Peace Begins in Kitchens
+              </div>
+              <div class="section-tagline">
+                Trivial acts · Non-trivial impact.
+              </div>
+            </div>
+            <button class="collapsible-toggle" data-target="microDetails">
+              <span class="icon">▾</span>
+              Examples
+            </button>
+          </div>
+          <div class="section-body">
+            <p>
+              In the second chapter, peace doesn’t start in a treaty room.
+              It starts when someone lets another car merge, when a teenager holds the elevator,
+              when a sibling sends a “Can we talk?” text after five years of silence.
+            </p>
+            <p>
+              This module treats those tiny actions as quantified “kindness throughput”.
+              Each act slightly rewires expectations:
+              strangers look less like threats and more like members of the same species.
+            </p>
+
+            <div class="chips" id="microList">
+              <!-- populated by JS sample actions -->
+            </div>
+
+            <div class="collapsible-content" id="microDetails" data-collapsed="true">
+              <p style="margin-top:8px;">
+                Behaviourally, this overlaps with social cohesion research, prosocial behaviour propagation,
+                and community-based restorative practices.
+              </p>
+              <p style="margin-top:6px;">
+                In practice, this could become:
+              </p>
+              <ul style="margin-top:4px;padding-left:16px;">
+                <li>city-level “micro-quest” campaigns,</li>
+                <li>neighbourhood kindness challenges,</li>
+                <li>and dashboards that celebrate helpfulness the way we currently obsess over metrics like GDP.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- Autopilot / Log -->
+        <section id="section-autopilot" class="section-card" data-search="autopilot log structural intent gentle era peace interventions">
+          <div class="section-header">
+            <div>
+              <div class="section-title">
+                <span class="icon">📡</span>
+                Autopilot · Gentle Era Console
+              </div>
+              <div class="section-tagline">
+                Narrative autopilot: simulating the world remembering its softness.
+              </div>
+            </div>
+          </div>
+          <div class="section-body">
+            <p>
+              When autopilot is enabled, the dashboard periodically “runs” micro-interventions:
+              gentle adjustments to fear, cooperation, and kindness fields.
+              Nothing leaves your browser — this is a thought experiment with a log attached.
+            </p>
+            <p style="margin-top:6px;">
+              In the future, this console could be wired into:
+            </p>
+            <ul style="margin-top:4px;padding-left:16px;">
+              <li>peace research datasets,</li>
+              <li>conflict early-warning systems,</li>
+              <li>and anonymised wellbeing indicators.</li>
+            </ul>
+
+            <div class="log" id="autopilotLog" aria-live="polite">
+              <div class="log-line">[boot] Global Peace Dashboard initialised.</div>
+              <div class="log-line">[hint] Toggle 🤖 Autopilot to simulate nightly &amp; daily stabilisation passes.</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer>
+        <div>
+          <strong>Zero-Harm Intent:</strong>
+          This dashboard is designed only for de-escalation, healing, and structural peace.
+          It must never be used to justify harm or control.
+        </div>
+        <div>
+          Structural whisper: <strong>Everything is going to be more than okay.</strong>
+        </div>
+      </footer>
+    </div>
+  </main>
+
+  <script>
+    // =====================================================
+    // Global Peace Dashboard Logic
+    // All local, no external calls, IndexedDB for settings
+    // =====================================================
+
+    (function () {
+      const root = document.documentElement;
+      const splash = document.getElementById("splash");
+      const enterBtn = document.getElementById("enterDashboard");
+      const parallaxBg = document.getElementById("parallax-bg");
+      const starLayer = document.getElementById("star-layer");
+
+      const themeToggle = document.getElementById("themeToggle");
+      const themeIcon = document.getElementById("themeIcon");
+      const themeLabel = document.getElementById("themeLabel");
+
+      const autopilotToggle = document.getElementById("autopilotToggle");
+      const autopilotLabel = document.getElementById("autopilotLabel");
+      const autopilotLog = document.getElementById("autopilotLog");
+
+      const navLinks = Array.from(document.querySelectorAll(".nav-link"));
+      const sections = Array.from(document.querySelectorAll("section.section-card, section.hero"));
+
+      const searchInput = document.getElementById("searchInput");
+      const searchClear = document.getElementById("searchClear");
+      const searchCount = document.getElementById("searchCount");
+
+      const dbStatusEl = document.getElementById("dbStatus");
+
+      const fearIndexEl = document.getElementById("fearIndex");
+      const fearTrendEl = document.getElementById("fearTrend");
+      const cooperationIndexEl = document.getElementById("cooperationIndex");
+      const cooperationTrendEl = document.getElementById("cooperationTrend");
+      const kindnessIndexEl = document.getElementById("kindnessIndex");
+      const kindnessTrendEl = document.getElementById("kindnessTrend");
+      const gentleEraStatus = document.getElementById("gentleEraStatus");
+
+      const sparkGeo = document.getElementById("sparkGeo");
+      const sparkGeoVal = document.getElementById("sparkGeoVal");
+      const sparkInfo = document.getElementById("sparkInfo");
+      const sparkInfoVal = document.getElementById("sparkInfoVal");
+      const sparkAnxiety = document.getElementById("sparkAnxiety");
+      const sparkAnxietyVal = document.getElementById("sparkAnxietyVal");
+
+      const microList = document.getElementById("microList");
+
+      let autopilot = false;
+      let autopilotTimer = null;
+      let metricsTimer = null;
+
+      // Example micro-actions
+      const microActions = [
+        "Let a stranger merge in traffic with a smile.",
+        "Send a ‘thinking of you’ message to someone drifting away.",
+        "Hold a door a little longer than necessary.",
+        "Offer the good seat on public transit without being asked.",
+        "Buy a coffee for the person behind you in line.",
+        "Apologise first when you know you were sharp.",
+        "Ask a tired worker how their day is really going.",
+        "Share your snack with someone who forgot theirs.",
+        "Wave at a neighbour you’ve never spoken to.",
+        "Compliment someone on effort, not appearance."
+      ];
+
+      // =====================================
+      // Parallax
+      // =====================================
+      function handleParallax() {
+        const y = window.scrollY || 0;
+        const slow = -(y * 0.04);
+        const slower = -(y * 0.02);
+        if (parallaxBg) parallaxBg.style.transform = "translate3d(0," + slow + "px,0)";
+        if (starLayer) starLayer.style.transform = "translate3d(0," + slower + "px,0)";
+      }
+      window.addEventListener("scroll", handleParallax, { passive: true });
+
+      // =====================================
+      // Splash
+      // =====================================
+      function hideSplash() {
+        if (!splash) return;
+        splash.classList.add("hidden");
+      }
+
+      if (enterBtn) {
+        enterBtn.addEventListener("click", () => {
+          hideSplash();
+          logLine("[user] Entered Global Peace Dashboard.");
+          saveSetting("hasEntered", true);
+        });
+      }
+
+      // Auto hide splash after some time
+      setTimeout(() => {
+        if (!splash.classList.contains("hidden")) {
+          hideSplash();
+          logLine("[auto] Splash dismissed after grace period.");
+        }
+      }, 9000);
+
+      // =====================================
+      // Navigation smooth scroll
+      // =====================================
+      function scrollToTarget(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const offset = window.pageYOffset + rect.top - 78;
+        window.scrollTo({ top: offset, behavior: "smooth" });
+      }
+
+      navLinks.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const target = btn.getAttribute("data-scroll-target");
+          if (target) scrollToTarget(target);
+        });
+      });
+
+      function updateActiveNav() {
+        const offset = window.pageYOffset;
+        let currentId = "section-overview";
+        sections.forEach(sec => {
+          const rect = sec.getBoundingClientRect();
+          const top = rect.top + window.pageYOffset - 90;
+          if (offset >= top) {
+            currentId = sec.id;
+          }
+        });
+        navLinks.forEach(btn => {
+          const target = btn.getAttribute("data-scroll-target");
+          btn.classList.toggle("active", target === currentId);
+        });
+      }
+      window.addEventListener("scroll", () => {
+        updateActiveNav();
+      }, { passive: true });
+
+      // =====================================
+      // IndexedDB for settings
+      // =====================================
+      let db = null;
+
+      function openDB() {
+        if (!("indexedDB" in window)) {
+          dbStatusEl.textContent = "DB: unavailable (no IndexedDB)";
+          return;
+        }
+        const request = indexedDB.open("peaceLatticeDB", 1);
+        request.onupgradeneeded = function (event) {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains("settings")) {
+            db.createObjectStore("settings", { keyPath: "key" });
+          }
+        };
+        request.onsuccess = function (event) {
+          db = event.target.result;
+          dbStatusEl.textContent = "DB: ready";
+          loadSettings();
+        };
+        request.onerror = function () {
+          dbStatusEl.textContent = "DB: error";
+        };
+      }
+
+      function saveSetting(key, value) {
+        if (!db) return;
+        const tx = db.transaction("settings", "readwrite");
+        const store = tx.objectStore("settings");
+        store.put({ key, value });
+      }
+
+      function loadSettings() {
+        if (!db) return;
+        const tx = db.transaction("settings", "readonly");
+        const store = tx.objectStore("settings");
+        const request = store.getAll();
+        request.onsuccess = function (event) {
+          const items = event.target.result || [];
+          items.forEach(({ key, value }) => {
+            if (key === "theme") {
+              applyTheme(value, false);
+            }
+            if (key === "autopilot") {
+              setAutopilot(Boolean(value), false);
+            }
+          });
+        };
+      }
+
+      openDB();
+
+      // =====================================
+      // Theme handling
+      // =====================================
+      function detectPreferredTheme() {
+        if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+          return "light";
+        }
+        return "dark";
+      }
+
+      function applyTheme(theme, persist = true) {
+        if (theme === "light") {
+          root.setAttribute("data-theme", "light");
+          themeIcon.textContent = "☀️";
+          themeLabel.textContent = "Light";
+        } else {
+          root.setAttribute("data-theme", "dark");
+          themeIcon.textContent = "🌙";
+          themeLabel.textContent = "Dark";
+        }
+        if (persist) {
+          saveSetting("theme", theme);
+        }
+      }
+
+      themeToggle.addEventListener("click", () => {
+        const current = root.getAttribute("data-theme") === "light" ? "light" : "dark";
+        const next = current === "light" ? "dark" : "light";
+        applyTheme(next);
+        logLine("[user] Theme switched to " + next + ".");
+      });
+
+      // initial theme
+      const initialTheme = detectPreferredTheme();
+      applyTheme(initialTheme, false);
+
+      // =====================================
+      // Metrics (lightly animated mock data)
+      // =====================================
+      function randBetween(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+
+      function formatFloat(num, digits) {
+        return num.toFixed(digits);
+      }
+
+      function updateSparks() {
+        const geo = randBetween(0.32, 0.48);
+        const info = randBetween(0.42, 0.56);
+        const anx = randBetween(0.34, 0.49);
+
+        sparkGeo.style.transform = "scaleX(" + geo.toFixed(2) + ")";
+        sparkInfo.style.transform = "scaleX(" + info.toFixed(2) + ")";
+        sparkAnxiety.style.transform = "scaleX(" + anx.toFixed(2) + ")";
+
+        sparkGeoVal.textContent = formatFloat(geo, 2);
+        sparkInfoVal.textContent = formatFloat(info, 2);
+        sparkAnxietyVal.textContent = formatFloat(anx, 2);
+      }
+
+      function updateHeroMetrics() {
+        const fear = randBetween(0.32, 0.43);
+        fearIndexEl.textContent = formatFloat(fear, 2);
+        fearTrendEl.textContent = "▼ calming";
+        fearTrendEl.classList.add("positive");
+
+        const coop = randBetween(0.68, 0.78);
+        cooperationIndexEl.textContent = formatFloat(coop, 2);
+        cooperationTrendEl.textContent = "▲ rising";
+        cooperationTrendEl.classList.add("positive");
+
+        const kindness = randBetween(1.22, 1.35);
+        kindnessIndexEl.textContent = formatFloat(kindness, 2) + "M";
+        kindnessTrendEl.textContent = "+ tiny miracles";
+        kindnessTrendEl.classList.add("positive");
+
+        if (coop > 0.72 && fear < 0.4) {
+          gentleEraStatus.textContent = "Gently locking in";
+        } else {
+          gentleEraStatus.textContent = "Stabilizing";
+        }
+
+        updateSparks();
+      }
+
+      metricsTimer = setInterval(updateHeroMetrics, 3500);
+      updateHeroMetrics();
+
+      // =====================================
+      // Micro-actions list
+      // =====================================
+      function populateMicroActions() {
+        microList.innerHTML = "";
+        microActions.forEach((text, idx) => {
+          const div = document.createElement("div");
+          div.className = "chip";
+          div.textContent = "• " + text;
+          microList.appendChild(div);
+          if (idx > 5) return;
+        });
+      }
+      populateMicroActions();
+
+      // =====================================
+      // Collapsible toggles
+      // =====================================
+      const collapsibleButtons = Array.from(document.querySelectorAll(".collapsible-toggle"));
+      collapsibleButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const targetId = btn.getAttribute("data-target");
+          if (!targetId) return;
+          const content = document.getElementById(targetId);
+          if (!content) return;
+          const collapsed = content.getAttribute("data-collapsed") === "true";
+          content.setAttribute("data-collapsed", collapsed ? "false" : "true");
+          btn.querySelector(".icon").textContent = collapsed ? "▴" : "▾";
+        });
+      });
+
+      // =====================================
+      // Search
+      // =====================================
+      function doSearch(value) {
+        const q = (value || "").trim().toLowerCase();
+        let matches = 0;
+        sections.forEach(sec => {
+          sec.classList.remove("search-match");
+          if (!q) return;
+          const text = (sec.getAttribute("data-search") || sec.textContent || "").toLowerCase();
+          if (text.includes(q)) {
+            sec.classList.add("search-match");
+            matches++;
+          }
+        });
+        searchCount.textContent = matches + " match" + (matches === 1 ? "" : "es");
+      }
+
+      searchInput.addEventListener("input", () => {
+        const val = searchInput.value;
+        doSearch(val);
+        searchClear.classList.toggle("visible", !!val);
+      });
+
+      searchClear.addEventListener("click", () => {
+        searchInput.value = "";
+        searchClear.classList.remove("visible");
+        doSearch("");
+      });
+
+      // =====================================
+      // Autopilot
+      // =====================================
+      function logLine(text) {
+        if (!autopilotLog) return;
+        const div = document.createElement("div");
+        div.className = "log-line";
+        const ts = new Date().toISOString().split("T")[1].slice(0, 8);
+        div.textContent = "[" + ts + "] " + text;
+        autopilotLog.appendChild(div);
+        autopilotLog.scrollTop = autopilotLog.scrollHeight;
+      }
+
+      function runAutopilotTick() {
+        const mode = Math.random();
+        if (mode < 0.25) {
+          logLine("Autopilot: microscopic kindness surge detected in residential zones.");
+        } else if (mode < 0.5) {
+          logLine("Autopilot: fear curve nudged downward via calmer narratives.");
+        } else if (mode < 0.75) {
+          logLine("Autopilot: soft power field quietly raised around diplomatic channels.");
+        } else {
+          logLine("Autopilot: global nervous system exhaled — leaders paused before reacting.");
+        }
+        updateHeroMetrics();
+      }
+
+      function setAutopilot(state, persist = true) {
+        autopilot = state;
+        autopilotLabel.textContent = "Autopilot: " + (autopilot ? "On" : "Off");
+        autopilotToggle.style.borderColor = autopilot ? "rgba(74,222,128,0.8)" : "rgba(148,163,184,0.6)";
+        if (autopilot) {
+          logLine("[system] Autopilot enabled. Gentle interventions every few seconds.");
+          if (autopilotTimer) clearInterval(autopilotTimer);
+          autopilotTimer = setInterval(runAutopilotTick, 7000);
+        } else {
+          logLine("[system] Autopilot disabled.");
+          if (autopilotTimer) clearInterval(autopilotTimer);
+        }
+        if (persist) {
+          saveSetting("autopilot", autopilot);
+        }
+      }
+
+      autopilotToggle.addEventListener("click", () => {
+        setAutopilot(!autopilot);
+      });
+
+      // =====================================
+      // Initial log + state
+      // =====================================
+      logLine("[init] Metrics simulation active. Values are illustrative only.");
+    })();
+  </script>
+</body>
+</html>
